@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Command line arguments given to this script
+args="$*"
+
+source "/opt/openjdk/util/logging/logging.sh"
+
+JAVA_OPTS="${JAVA_OPTS:-${JAVA_OPTIONS}}"
+if [ -f "/opt/openjdk/jolokia/jolokia-opts" ]; then
+    JAVA_OPTS="${JAVA_OPTS} $(/opt/openjdk/jolokia/jolokia-opts)"
+fi
+if [ -f "/opt/openjdk/prometheus/prometheus-opts" ]; then
+    JAVA_OPTS="${JAVA_OPTS} $(source /opt/openjdk/prometheus/prometheus-opts && get_prometheus_opts)"
+fi
+export JAVA_OPTS
+export JAVA_OPTIONS="$JAVA_OPTS"
+
+echo "Starting the Java application using /opt/openjdk/java/run/run-java.sh $args..."
+exec "/opt/openjdk/java/run/run-java.sh" $args ${JAVA_ARGS}
