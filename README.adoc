@@ -1,0 +1,252 @@
+ubi8-openjdk-slim: Docker Files to Create a Red Hat 8 UBI based Image with OpenJDK 8
+====================================================================================
+:toc:
+:toc-placement: preamble
+:toclevels: 1
+:showtitle:
+:Some attr: Some value
+
+{empty}
+
+== Requirements
+* Access to the https://registry.redhat.io[Red Hat Image Registry] is Required to Pull the Base Image
+* Understanding of Podman or Docker
+* Access to a Private Registry to Push the Resultant Image
+
+== References
+[options="header",cols="2"]
+|===========================
+| Title
+| Link
+
+| Getting Started with Podman 
+| https://podman.io/getting-started/
+
+| Podman and Buildah for Docker users
+| https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users/
+
+| Get Started with Docker
+| https://www.docker.com/get-started
+
+| Build and run your image
+| https://docs.docker.com/get-started/part2/
+|===========================
+
+== Steps
+. Clone this repository
+. Edit any of the files to customize the image to your needs
+. Build the image
+. Tag the image and push to private image registry
+
+== Environment Variables
+The following environment variables provide configuration for runtime of the image. All variables are optional as sensible defaults are calculated at runtime including auto-discovery of a single *jar* artifact if coppied to the _/deployments_ folder
+
+[options="header",cols="3"]
+|===========================
+| Variable Name
+| Description
+| Example
+
+| AB_JOLOKIA_AUTH_OPENSHIFT
+| Switch on client authentication for OpenShift TLS communication. The value of this parameter can be a relative distinguished name which must be contained in a presented client certificate. Enabling this parameter will automatically switch Jolokia into https communication mode. The default CA cert is set to /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+| true
+
+| AB_JOLOKIA_CONFIG
+| If set uses this file (including path) as Jolokia JVM agent properties (as described in Jolokia’s reference manual). If not set, the /opt/jolokia/etc/jolokia.properties file will be created using the settings as defined in this document, otherwise the rest of the settings in this document are ignored.
+| /opt/jolokia/custom.properties
+
+| AB_JOLOKIA_DISCOVERY_ENABLED
+| Enable Jolokia discovery. Defaults to false.
+| true
+
+| AB_JOLOKIA_HOST
+| Host address to bind to, the default address is 0.0.0.0.
+| 127.0.0.1
+
+| AB_JOLOKIA_HTTPS
+| Switch on secure communication with https. By default self-signed server certificates are generated if no serverCert configuration is given in AB_JOLOKIA_OPTS. NOTE: If the values is set to an empty string, https is turned off. If the value is set to a non empty string, https is turned on.
+| true
+
+| AB_JOLOKIA_OFF
+| If set disables activation of Jolokia (i.e. echos an empty value). By default, Jolokia is enabled. NOTE: If the values is set to an empty string, https is turned off. If the value is set to a non empty string, https is turned on.
+| true
+
+| AB_JOLOKIA_OPTS
+| Additional options to be appended to the agent configuration. They should be given in the format "key=value, key=value, …​ "
+| backlog=20
+
+| AB_JOLOKIA_PASSWORD
+| Password for basic authentication. By default authentication is switched off.
+| mypassword
+
+| AB_JOLOKIA_PASSWORD_RANDOM
+| If set, a random value is generated for AB_JOLOKIA_PASSWORD, and it is saved in the /opt/jolokia/etc/jolokia.pw file.
+| true
+
+| AB_JOLOKIA_PORT
+| Port to use (Default: 8778)
+| 5432
+
+| AB_JOLOKIA_USER
+| User for basic authentication. Defaults to 'jolokia'
+| myusername
+
+| CONTAINER_CORE_LIMIT
+| A calculated core limit as described in CFS Bandwidth Control
+| 2
+
+| CONTAINER_MAX_MEMORY
+| Memory limit given to the container. This value must be in bytes.
+| 536870912 (which results into -Xmx256 (default ratio is 50%))
+
+| GC_ADAPTIVE_SIZE_POLICY_WEIGHT
+| The weighting given to the current Garbage Collection (GC) time versus previous GC times.
+| 90
+
+| GC_MAX_HEAP_FREE_RATIO
+| Maximum percentage of heap free after GC to avoid shrinking.
+| 40
+
+| GC_MAX_METASPACE_SIZE
+| The maximum metaspace size.
+| 100
+
+| GC_MIN_HEAP_FREE_RATIO
+| Minimum percentage of heap free after GC to avoid expansion.
+| 20
+
+| GC_TIME_RATIO
+| Specifies the ratio of the time spent outside the garbage collection (for example, the time spent for application execution) to the time spent in the garbage collection.
+| 4
+
+| HTTP_PROXY
+| The location of the http proxy, this will be used for both Maven builds and Java runtime
+| 127.0.0.1:8080
+
+| http_proxy
+| The location of the http proxy, this takes precedence over HTTP_PROXY and will be used for the Java runtime
+| http://127.0.0.1:8080
+
+| HTTPS_PROXY
+| The location of the https proxy, this takes precedence over http_proxy and HTTP_PROXY and will be used for the Java runtime
+| myuser@127.0.0.1:8080
+
+| https_proxy
+| The location of the https proxy, this takes precedence over http_proxy, HTTP_PROXY, and HTTPS_PROXY and will be used for the Java runtime
+| myuser:mypass@127.0.0.1:8080
+
+| JAVA_APP_DIR
+| The directory where the application resides. All paths in your application are relative to this directory.
+| myapplication/
+
+| JAVA_APP_JAR
+| A jar file with an appropriate manifest so that it can be started with Java -jar if no JAVA_MAIN_CLASS is set. In all cases this jar file is added to the classpath, too.
+| 
+
+| JAVA_APP_NAME
+| Name to use for the process
+| demo-app
+
+| JAVA_ARGS
+| Arguments passed to the Java application
+| hello_world
+
+| JAVA_CLASSPATH
+| The classpath to use. If JAVA_LIB_DIR is set, the startup script checks for a file JAVA_LIB_DIR/classpath. If it is not set, the startup script checks for a file JAVA_APP_DIR/classpath and use its content as classpath. If this file doesn’t exists all jars in the application directory are added (classes:JAVA_APP_DIR/*).
+| 
+
+| JAVA_DEBUG
+| If set remote debugging will be switched on
+| true
+
+| JAVA_DEBUG_PORT
+| Port used for remote debugging. Default: 5005
+| 9009
+
+| JAVA_LIB_DIR
+| Directory holding the Java jar files as well an optional classpath file which holds the classpath. Either as a single-line classpath (colon separated) or with jar files listed line-by-line. If not set JAVA_LIB_DIR is the same as JAVA_APP_DIR.
+| 
+
+| JAVA_MAIN_CLASS
+| A main class to use as argument for Java. When this environment variable is given, all jar files in JAVA_APP_DIR are added to the classpath as well as JAVA_LIB_DIR.
+| com.example.MyMainClass
+
+| JAVA_MAX_MEM_RATIO
+| It is used when no -Xmx option is given in JAVA_OPTIONS. This is used to calculate a default maximal Heap Memory based on a containers restriction. If used in a Docker container without any memory constraints for the container then this option has no effect. If there is a memory constraint then -Xmx is set to a ratio of the container available memory as set here. The default is 50 which means 50% of the available memory is used as an upper boundary. You can skip this mechanism by setting this value to 0 in which case no -Xmx option is added.
+| 40
+
+| JAVA_OPTIONS
+| JVM options passed to the Java command
+| -verbose:class
+
+| NO_PROXY
+| A comma-separated lists of hosts, IP addresses or domains that can be accessed directly, this will be used for both Maven builds and Java runtime
+| foo.example.com,bar.example.com
+
+| no_proxy
+| A comma-separated lists of hosts, IP addresses or domains that can be accessed directly, this takes precedence over NO_PROXY and will be used for both Maven builds and Java runtime
+| *.example.com
+
+|===========================
+
+
+== Exposed Ports
+[options="header",cols="2"]
+|===========================
+| Port
+| Description
+
+| 8080
+| Default port for *HTTP* access to deployed Java application
+
+| 8443
+| Default port for *HTTPS* access to deployed Java application
+
+| 8778
+| Default port for *Jolokia*
+
+| 9799
+| Default port for *Prometheus*
+|===========================
+
+== Usage
+
+=== Creating Initial Base Image
+* Build the Image
++
+[source, bash]
+----
+$ podman build -t <image-name>:<tag> . <1>
+----
+<1> Local image tag can be specified by providing *-t* flag
+
+* Tag Image
++
+[source, bash]
+----
+$ podman tag <image-name>:<tag> \ <1>
+  <private-registry-url[:port]>/<image-name>:<tag> <2>  
+----
+<1> Image to apply the tag to
+<2> Tag to be applied to the private registry image
+
+* Push Image to Private Registry
++
+[source, bash]
+----
+$ podman push <private-registry-url[:port]>/<image-name>:<tag>
+----
+
+=== Using Base Image
+* Package the Java artifact using preferred build tool
+* Create Dockerfile with a COPY instruction copying the artifact/s to _/deplyoment_ and changing ownership to container user _1001_
+* Use resultant image 
+
+.Sample Dockerfile
+[source,yaml]
+----
+FROM <private-registry-url[:port]>/<image>:<tag> <1>
+COPY --chown=1001:root <path-to-java-artifact>  /deployments/ <2>
+----
+<1> Specify base image location
+<2> Copy Java artifacts to target directory and change ownership to non-privileged user
